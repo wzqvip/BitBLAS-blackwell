@@ -11,6 +11,7 @@ from bitblas.base.arch import (
     is_volta_arch,
     is_ada_arch,
     is_hopper_arch,
+    is_blackwell_arch,
     is_tensorcore_supported_precision,
 )
 from tilelang.intrinsics.utils import get_mma_micro_size
@@ -134,10 +135,7 @@ class MatmulScheduler(MatmulBaseParams):
                 return self.matmul_simt_scheduler
 
     def dispatch_scheduler(self, arch: TileDevice) -> BaseScheduler:
-        if is_hopper_arch(arch):
-            logger.warning("Hopper architecture is not fully supported yet, fallback to Ada")
-            return self.dispatch_ampere_scheduler(arch)
-        elif is_ampere_arch(arch) or is_ada_arch(arch):
+        if is_blackwell_arch(arch) or is_hopper_arch(arch) or is_ampere_arch(arch) or is_ada_arch(arch):
             return self.dispatch_ampere_scheduler(arch)
         elif is_volta_arch(arch):
             return self.dispatch_volta_scheduler(arch)
