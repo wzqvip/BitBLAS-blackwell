@@ -13,6 +13,7 @@ from typing import List
 import re
 import tarfile
 from io import BytesIO
+import tempfile
 import os
 import sys
 import urllib.request
@@ -142,8 +143,14 @@ def download_and_extract_llvm(version, is_aarch64=False, extract_path="3rdparty"
 
     # Extract the file
     print(f"Extracting {file_name} to {extract_path}")
-    with tarfile.open(fileobj=BytesIO(file_content), mode="r:xz") as tar:
-        tar.extractall(path=extract_path)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.xz") as tmp_tar:
+        tmp_tar.write(file_content)
+        tmp_tar_path = tmp_tar.name
+    try:
+        # Avoid ownership preservation to prevent permission errors on non-root users
+        subprocess.check_call(["tar", "--no-same-owner", "-xJf", tmp_tar_path, "-C", extract_path])
+    finally:
+        os.remove(tmp_tar_path)
 
     print("Download and extraction completed successfully.")
     return os.path.abspath(os.path.join(extract_path, file_name.replace(".tar.xz", "")))
@@ -153,8 +160,10 @@ package_data = {
     "bitblas": ["py.typed"],
 }
 
-LLVM_VERSION = "10.0.1"
-IS_AARCH64 = False  # Set to True if on an aarch64 platform
+# Prefer a modern LLVM build that links against libtinfo6 (available on Ubuntu 24.04)
+# instead of the legacy 10.x release that required libtinfo5.
+LLVM_VERSION = "18.1.8"
+IS_AARCH64 = True  # Set to True if on an aarch64 platform
 EXTRACT_PATH = "3rdparty"  # Default extraction path
 
 
