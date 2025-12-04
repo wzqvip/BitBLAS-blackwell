@@ -117,6 +117,10 @@ def auto_detect_nvidia_target(gpu_id: int = 0) -> str:
                 return "cuda -arch=sm_90"
             elif cap_int >= 89:
                 return "cuda -arch=sm_89"
+            elif cap_int >= 87:
+                return "cuda -arch=sm_87"
+            elif cap_int >= 86:
+                return "cuda -arch=sm_86"
             elif cap_int >= 80:
                 return "cuda -arch=sm_80"
     except Exception:
