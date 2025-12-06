@@ -5,6 +5,20 @@
 
 echo "Starting installation script..."
 
+detect_aarch64() {
+    local override="${BITBLAS_FORCE_AARCH64:-}"
+    if [[ -n "$override" ]]; then
+        override=$(echo "$override" | tr '[:upper:]' '[:lower:]')
+        case "$override" in
+            1|true|yes|on|aarch64|arm64) return 0 ;;
+            0|false|no|off|x86_64|amd64) return 1 ;;
+        esac
+    fi
+    local machine
+    machine=$(uname -m 2>/dev/null | tr '[:upper:]' '[:lower:]')
+    [[ "$machine" == "aarch64" || "$machine" == "arm64" || "$machine" == armv8* ]]
+}
+
 # Step 1: Install Python requirements
 echo "Installing Python requirements from requirements.txt..."
 pip install -r requirements.txt
@@ -17,10 +31,14 @@ fi
 
 # Step 2: Define LLVM version and architecture
 LLVM_VERSION="10.0.1"
-IS_AARCH64=false
+if detect_aarch64; then
+    IS_AARCH64=true
+else
+    IS_AARCH64=false
+fi
 EXTRACT_PATH="3rdparty"
 echo "LLVM version set to ${LLVM_VERSION}."
-echo "Is AARCH64 architecture: $IS_AARCH64"
+echo "Detected architecture: $(uname -m 2>/dev/null), Is AARCH64 architecture: $IS_AARCH64"
 
 # Step 3: Determine the correct Ubuntu version based on LLVM version
 UBUNTU_VERSION="16.04"

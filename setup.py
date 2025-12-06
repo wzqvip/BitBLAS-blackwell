@@ -13,6 +13,7 @@ from typing import List
 import re
 import tarfile
 from io import BytesIO
+import tempfile
 import os
 import sys
 import urllib.request
@@ -142,19 +143,41 @@ def download_and_extract_llvm(version, is_aarch64=False, extract_path="3rdparty"
 
     # Extract the file
     print(f"Extracting {file_name} to {extract_path}")
-    with tarfile.open(fileobj=BytesIO(file_content), mode="r:xz") as tar:
-        tar.extractall(path=extract_path)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.xz") as tmp_tar:
+        tmp_tar.write(file_content)
+        tmp_tar_path = tmp_tar.name
+    try:
+        # Avoid ownership preservation to prevent permission errors on non-root users
+        subprocess.check_call(["tar", "--no-same-owner", "-xJf", tmp_tar_path, "-C", extract_path])
+    finally:
+        os.remove(tmp_tar_path)
 
     print("Download and extraction completed successfully.")
     return os.path.abspath(os.path.join(extract_path, file_name.replace(".tar.xz", "")))
+
+
+def detect_aarch64() -> bool:
+    """Detect whether the current machine runs on an AArch64/ARM64 architecture."""
+    override = os.environ.get("BITBLAS_FORCE_AARCH64")
+    if override is not None:
+        override = override.strip().lower()
+        if override in {"1", "true", "yes", "on", "aarch64", "arm64"}:
+            return True
+        if override in {"0", "false", "no", "off", "x86_64", "amd64"}:
+            return False
+
+    machine = platform.machine().lower()
+    return machine in {"aarch64", "arm64"} or machine.startswith("armv8")
 
 
 package_data = {
     "bitblas": ["py.typed"],
 }
 
-LLVM_VERSION = "10.0.1"
-IS_AARCH64 = False  # Set to True if on an aarch64 platform
+# Prefer a modern LLVM build that links against libtinfo6 (available on Ubuntu 24.04)
+# instead of the legacy 10.x release that required libtinfo5.
+LLVM_VERSION = "18.1.8"
+IS_AARCH64 = detect_aarch64()
 EXTRACT_PATH = "3rdparty"  # Default extraction path
 
 

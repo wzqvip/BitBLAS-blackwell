@@ -86,9 +86,9 @@ def auto_detect_nvidia_target(gpu_id: int = 0) -> str:
     Returns:
         str: The detected TVM target architecture.
     """
-    # Return a predefined target if specified in the environment variable
-    # if "TVM_TARGET" in os.environ:
-    #     return os.environ["TVM_TARGET"]
+    # Honor explicit override first
+    if "TVM_TARGET" in os.environ:
+        return os.environ["TVM_TARGET"]
 
     # Fetch all available tags and filter for NVIDIA tags
     all_tags = list_tags()
@@ -100,6 +100,31 @@ def auto_detect_nvidia_target(gpu_id: int = 0) -> str:
     # Compat: remap oem devices to their correct non-oem model names for tvm target
     if gpu_model in NVIDIA_GPU_REMAP:
         gpu_model = NVIDIA_GPU_REMAP[gpu_model]
+
+    # If we can get compute capability, prefer constructing an explicit arch target
+    try:
+        output = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=compute_cap", "--format=csv,noheader"],
+            encoding="utf-8",
+        ).strip()
+        cap = output.split("\n")[gpu_id].strip()
+        # compute_cap is like "11.0"
+        if cap and cap.replace(".", "").isdigit():
+            cap_int = int(cap.split(".")[0]) * 10 + int(cap.split(".")[1])
+            if cap_int >= 110:
+                return "cuda -arch=sm_110"
+            elif cap_int >= 90:
+                return "cuda -arch=sm_90"
+            elif cap_int >= 89:
+                return "cuda -arch=sm_89"
+            elif cap_int >= 87:
+                return "cuda -arch=sm_87"
+            elif cap_int >= 86:
+                return "cuda -arch=sm_86"
+            elif cap_int >= 80:
+                return "cuda -arch=sm_80"
+    except Exception:
+        pass
 
     target = find_best_match(nvidia_tags, gpu_model) if gpu_model else "cuda"
     return target

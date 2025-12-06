@@ -35,6 +35,7 @@ from .cuda import (
     is_ampere_arch,  # noqa: F401
     is_ada_arch,  # noqa: F401
     is_hopper_arch,  # noqa: F401
+    is_blackwell_arch,  # noqa: F401
     is_tensorcore_supported_precision,  # noqa: F401
     has_mma_support,  # noqa: F401
 )
