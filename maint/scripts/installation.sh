@@ -6,9 +6,27 @@
 # install requirements
 pip install -r requirements.txt
 
+detect_aarch64() {
+    local override="${BITBLAS_FORCE_AARCH64:-}"
+    if [[ -n "$override" ]]; then
+        override=$(echo "$override" | tr '[:upper:]' '[:lower:]')
+        case "$override" in
+            1|true|yes|on|aarch64|arm64) return 0 ;;
+            0|false|no|off|x86_64|amd64) return 1 ;;
+        esac
+    fi
+    local machine
+    machine=$(uname -m 2>/dev/null | tr '[:upper:]' '[:lower:]')
+    [[ "$machine" == "aarch64" || "$machine" == "arm64" || "$machine" == armv8* ]]
+}
+
 # install llvm
 LLVM_VERSION="10.0.1"
-IS_AARCH64=false
+if detect_aarch64; then
+    IS_AARCH64=true
+else
+    IS_AARCH64=false
+fi
 EXTRACT_PATH="3rdparty"
 
 UBUNTU_VERSION="16.04"

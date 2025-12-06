@@ -156,6 +156,20 @@ def download_and_extract_llvm(version, is_aarch64=False, extract_path="3rdparty"
     return os.path.abspath(os.path.join(extract_path, file_name.replace(".tar.xz", "")))
 
 
+def detect_aarch64() -> bool:
+    """Detect whether the current machine runs on an AArch64/ARM64 architecture."""
+    override = os.environ.get("BITBLAS_FORCE_AARCH64")
+    if override is not None:
+        override = override.strip().lower()
+        if override in {"1", "true", "yes", "on", "aarch64", "arm64"}:
+            return True
+        if override in {"0", "false", "no", "off", "x86_64", "amd64"}:
+            return False
+
+    machine = platform.machine().lower()
+    return machine in {"aarch64", "arm64"} or machine.startswith("armv8")
+
+
 package_data = {
     "bitblas": ["py.typed"],
 }
@@ -163,7 +177,7 @@ package_data = {
 # Prefer a modern LLVM build that links against libtinfo6 (available on Ubuntu 24.04)
 # instead of the legacy 10.x release that required libtinfo5.
 LLVM_VERSION = "18.1.8"
-IS_AARCH64 = True  # Set to True if on an aarch64 platform
+IS_AARCH64 = detect_aarch64()
 EXTRACT_PATH = "3rdparty"  # Default extraction path
 
 
